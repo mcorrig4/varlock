@@ -269,18 +269,31 @@ export class ConfigItem {
    * special early resolution helper
    * currently used to resolve the envFlag before everything else has been loaded
    * */
-  async earlyResolve() {
+  async earlyResolve(resolving?: Set<string>) {
+    if (this.isResolved) return;
+
+    // Cycle detection: track which items are currently in the resolution chain
+    // (mirrors the recursionStack pattern in findGraphCycles)
+    const resolvingSet = resolving ?? new Set<string>();
+    if (resolvingSet.has(this.key)) {
+      throw new SchemaError(
+        `Circular dependency detected during early resolution: ${this.key}`,
+      );
+    }
+    resolvingSet.add(this.key);
+
     await this.process();
 
     // process and resolve any other items our env flag depends on
     for (const depKey of this.dependencyKeys) {
       const depItem = this.envGraph.configSchema[depKey];
       if (!depItem) {
-        throw new Error(`eager resolution eror - non-existant dependency: ${depKey}`);
+        throw new Error(`eager resolution error - non-existent dependency: ${depKey}`);
       }
-      await depItem.earlyResolve();
+      await depItem.earlyResolve(resolvingSet);
     }
     await this.resolve();
+    resolvingSet.delete(this.key);
   }
 
   _isRequired: boolean = true;
