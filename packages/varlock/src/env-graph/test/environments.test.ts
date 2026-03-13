@@ -364,6 +364,48 @@ describe('@currentEnv and .env.* file loading logic', () => {
   });
 });
 
+describe('earlyResolve cycle detection', () => {
+  test('self-referencing env flag triggers loading error', envFilesTest({
+    files: {
+      '.env.schema': outdent`
+        # @currentEnv=$APP_ENV
+        # ---
+        APP_ENV=$APP_ENV
+      `,
+    },
+    loadingError: true,
+  }));
+
+  test('indirect cycle via env flag triggers loading error', envFilesTest({
+    files: {
+      '.env.schema': outdent`
+        # @currentEnv=$APP_ENV
+        # ---
+        APP_ENV=$OTHER
+        OTHER=$APP_ENV
+      `,
+    },
+    loadingError: true,
+  }));
+
+  test('diamond dependency (no cycle) in env flag resolves correctly', envFilesTest({
+    files: {
+      '.env.schema': outdent`
+        # @currentEnv=$APP_ENV
+        # ---
+        APP_ENV=fallback($A, $B)
+        A=fallback($SHARED, a-default)
+        B=fallback($SHARED, b-default)
+        SHARED=dev
+      `,
+    },
+    expectValues: {
+      APP_ENV: 'dev',
+      SHARED: 'dev',
+    },
+  }));
+});
+
 describe('multiple data-source handling', () => {
   test('undefined handling for overriding values', envFilesTest({
     files: {

@@ -701,7 +701,14 @@ export class DirectoryDataSource extends EnvGraphDataSource {
       }
       const envFlagItem = this.graph.configSchema[envFlagKey];
       if (envFlagItem) {
-        if (!envFlagItem.resolvedValue) await envFlagItem.earlyResolve();
+        if (!envFlagItem.resolvedValue) {
+          try {
+            await envFlagItem.earlyResolve();
+          } catch (err) {
+            this._loadingError = err instanceof Error ? err : new Error(String(err));
+            return;
+          }
+        }
         currentEnv = envFlagItem.resolvedValue?.toString();
       }
     }
