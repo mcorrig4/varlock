@@ -1,0 +1,3 @@
+🚨 Error encountered while loading directory - /home/claude/code/goalserve-poc/apps/demo-pwa
+
+Circular dependency detected during early resolution: APP_ENV
